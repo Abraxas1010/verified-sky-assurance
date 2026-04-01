@@ -46,6 +46,13 @@ See:
 ./scripts/verify_all.sh
 ```
 
+## Container Quick Start
+
+```bash
+docker build -t verified-sky-assurance .
+docker run --rm verified-sky-assurance
+```
+
 ## License
 
 [Apoth3osis License Stack v1](LICENSE.md)
