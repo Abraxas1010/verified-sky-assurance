@@ -53,4 +53,21 @@ contract SKYBundleRegistryTest is TestBase {
         assertTrue(registeredAt > 0, "registration timestamp missing");
         assertEq(registeredBy, address(this), "registeredBy mismatch");
     }
+
+    function testRejectsDuplicateRegistration() public {
+        SKYBundleRegistry registry = new SKYBundleRegistry(address(new MockVerifierTrue()));
+        bytes32 bundleHash = keccak256("bundle-verified");
+        registry.register(bundleHash, "demo", "Lean4", 2);
+        (bool ok,) = address(registry).call(
+            abi.encodeWithSelector(
+                registry.register.selector,
+                bundleHash,
+                "demo",
+                "Lean4",
+                2
+            )
+        );
+        assertFalse(ok, "duplicate registration must revert");
+        assertEq(registry.registeredCount(), 1, "registry count must remain stable");
+    }
 }

@@ -106,4 +106,48 @@ contract SKYPositiveFixtureTest is TestBase {
         assertFalse(verified, "wrong bundle hash must not be recorded");
         assertEq(verifiedAt, 0, "wrong bundle hash must not get a timestamp");
     }
+
+    function testBatchVerifyMixedResults() public {
+        (
+            SKYVerifier verifier,
+            SKYVerifier.STARKProof memory proofOk,
+            SKYVerifier.QueryOpening[] memory traceOpeningsOk,
+            SKYVerifier.FRILayerOpening[][] memory friOpeningsOk,
+            bytes32 bundleHash
+        ) = _load();
+        (
+            ,
+            SKYVerifier.STARKProof memory proofBad,
+            SKYVerifier.QueryOpening[] memory traceOpeningsBad,
+            SKYVerifier.FRILayerOpening[][] memory friOpeningsBad,
+            
+        ) = _load();
+
+        bytes32[] memory bundleHashes = new bytes32[](2);
+        SKYVerifier.STARKProof[] memory proofs = new SKYVerifier.STARKProof[](2);
+        SKYVerifier.QueryOpening[][] memory traceOpeningsBatch = new SKYVerifier.QueryOpening[][](2);
+        SKYVerifier.FRILayerOpening[][][] memory friOpeningsBatch = new SKYVerifier.FRILayerOpening[][][](2);
+
+        bundleHashes[0] = bundleHash;
+        proofs[0] = proofOk;
+        traceOpeningsBatch[0] = traceOpeningsOk;
+        friOpeningsBatch[0] = friOpeningsOk;
+
+        proofs[1] = proofBad;
+        proofs[1].friFinal += 1;
+        bundleHashes[1] = bundleHash;
+        traceOpeningsBatch[1] = traceOpeningsBad;
+        friOpeningsBatch[1] = friOpeningsBad;
+
+        bool[] memory results = verifier.verifyBatch(
+            bundleHashes,
+            proofs,
+            traceOpeningsBatch,
+            friOpeningsBatch
+        );
+
+        assertEq(results.length, 2, "batch result length mismatch");
+        assertTrue(results[0], "first proof must verify");
+        assertFalse(results[1], "tampered second proof must reject");
+    }
 }

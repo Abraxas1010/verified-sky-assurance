@@ -47,6 +47,13 @@ See:
 ./scripts/verify_all.sh
 ```
 
+This gate now covers:
+
+- Python attestation verification regressions
+- multi-case positive attestation corpus checks
+- Foundry contract tests for positive, tamper, duplicate-registration, and batch paths
+- gas budget checks for the main on-chain verification paths
+
 The Solidity lane is explicit and local-only:
 
 ```bash

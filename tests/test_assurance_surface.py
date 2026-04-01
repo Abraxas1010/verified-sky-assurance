@@ -9,7 +9,7 @@ import sys
 import unittest
 from pathlib import Path
 
-from assurance.attestation import generate_attestation, verify_attestation
+from assurance.attestation import generate_attestation, record_trace, verify_attestation
 from assurance.models import Bundle, Obligation, ObligationResult
 from assurance.reducer import verify_bundle
 
@@ -17,6 +17,21 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class AssuranceTests(unittest.TestCase):
+    POSITIVE_CORPUS = [
+        (
+            "trivial_true",
+            "K",
+        ),
+        (
+            "identity_combinator",
+            ["app", ["app", ["app", "S", "K"], "K"], "K"],
+        ),
+        (
+            "k_rule_demo",
+            ["app", ["app", "K", "K"], ["app", ["app", "S", "K"], "K"]],
+        ),
+    ]
+
     def _load_positive_fixture(self):
         bundle = Bundle.from_dict(json.loads((ROOT / "examples" / "positive_bundle.json").read_text()))
         results = [
@@ -69,6 +84,28 @@ class AssuranceTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
 
+    def test_positive_corpus_generates_and_verifies(self):
+        os.environ["ENABLE_EXPERIMENTAL_ATTESTATION"] = "true"
+        for obligation_id, compiled_check in self.POSITIVE_CORPUS:
+            with self.subTest(obligation_id=obligation_id):
+                bundle = Bundle(
+                    source_hash=f"corpus-{obligation_id}",
+                    obligations=[
+                        Obligation(
+                            id=obligation_id,
+                            compiled_check=compiled_check,
+                            expected_result="true",
+                        )
+                    ],
+                )
+                _, results = verify_bundle(bundle)
+                _, _, trace = record_trace(
+                    bundle.obligations[0].compiled_check,
+                    bundle.obligations[0].fuel,
+                )
+                attestation = generate_attestation(bundle, results, [trace]).to_dict()
+                self.assertTrue(verify_attestation(attestation, bundle, results))
+
     def test_attestation_rejects_empty_proof_payload(self):
         bundle, results, attestation = self._load_positive_fixture()
         payload = json.loads(base64.b64decode(attestation["proof"]))
@@ -82,6 +119,25 @@ class AssuranceTests(unittest.TestCase):
         bundle, results, attestation = self._load_positive_fixture()
         payload = json.loads(base64.b64decode(attestation["proof"]))
         payload["proofs"][0]["binding_hash"] = "00" * 32
+        attestation["proof"] = base64.b64encode(
+            json.dumps(payload, sort_keys=True).encode()
+        ).decode()
+        self.assertFalse(verify_attestation(attestation, bundle, results))
+
+    def test_attestation_rejects_wrong_trace_length(self):
+        bundle, results, attestation = self._load_positive_fixture()
+        attestation["trace_length"] += 1
+        self.assertFalse(verify_attestation(attestation, bundle, results))
+
+    def test_attestation_rejects_low_security_bits(self):
+        bundle, results, attestation = self._load_positive_fixture()
+        attestation["security_bits"] = 64
+        self.assertFalse(verify_attestation(attestation, bundle, results))
+
+    def test_attestation_rejects_wrong_num_obligations(self):
+        bundle, results, attestation = self._load_positive_fixture()
+        payload = json.loads(base64.b64decode(attestation["proof"]))
+        payload["num_obligations"] += 1
         attestation["proof"] = base64.b64encode(
             json.dumps(payload, sort_keys=True).encode()
         ).decode()
