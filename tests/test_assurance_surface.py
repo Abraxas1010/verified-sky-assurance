@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import base64
+import json
 import os
 import subprocess
 import sys
@@ -8,13 +10,22 @@ import unittest
 from pathlib import Path
 
 from assurance.attestation import generate_attestation, verify_attestation
-from assurance.models import Bundle, Obligation
+from assurance.models import Bundle, Obligation, ObligationResult
 from assurance.reducer import verify_bundle
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 class AssuranceTests(unittest.TestCase):
+    def _load_positive_fixture(self):
+        bundle = Bundle.from_dict(json.loads((ROOT / "examples" / "positive_bundle.json").read_text()))
+        results = [
+            ObligationResult(**item)
+            for item in json.loads((ROOT / "examples" / "positive_results.json").read_text())
+        ]
+        attestation = json.loads((ROOT / "examples" / "positive_attestation.json").read_text())
+        return bundle, results, attestation
+
     def test_docs_and_contracts_exist(self):
         for path in [
             ROOT / "docs" / "security_model.md",
@@ -57,6 +68,24 @@ class AssuranceTests(unittest.TestCase):
             timeout=30,
         )
         self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+
+    def test_attestation_rejects_empty_proof_payload(self):
+        bundle, results, attestation = self._load_positive_fixture()
+        payload = json.loads(base64.b64decode(attestation["proof"]))
+        payload["proofs"] = []
+        attestation["proof"] = base64.b64encode(
+            json.dumps(payload, sort_keys=True).encode()
+        ).decode()
+        self.assertFalse(verify_attestation(attestation, bundle, results))
+
+    def test_attestation_rejects_wrong_bundle_binding(self):
+        bundle, results, attestation = self._load_positive_fixture()
+        payload = json.loads(base64.b64decode(attestation["proof"]))
+        payload["proofs"][0]["binding_hash"] = "00" * 32
+        attestation["proof"] = base64.b64encode(
+            json.dumps(payload, sort_keys=True).encode()
+        ).decode()
+        self.assertFalse(verify_attestation(attestation, bundle, results))
 
     def test_foundry_contract_harness(self):
         result = subprocess.run(

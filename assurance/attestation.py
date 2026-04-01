@@ -149,7 +149,7 @@ def _trace_to_field_columns(
     return step_col, state_col, input_field, output_field
 
 
-def stark_prove(trace: ExecutionTrace) -> dict:
+def stark_prove(trace: ExecutionTrace, binding_hash: bytes) -> dict:
     """Generate a STARK proof for an SKY reduction trace.
 
     The AIR (Algebraic Intermediate Representation) enforces:
@@ -164,6 +164,9 @@ def stark_prove(trace: ExecutionTrace) -> dict:
     low-degree polynomial that satisfies all constraints at random
     challenge points, which occurs with probability < 2^{-120}.
     """
+    if len(binding_hash) != 32:
+        raise ValueError("binding hash must be exactly 32 bytes")
+
     step_col, state_col, input_field, output_field = _trace_to_field_columns(
         trace
     )
@@ -183,6 +186,7 @@ def stark_prove(trace: ExecutionTrace) -> dict:
 
     # ── 3. Commit trace ──
     transcript = Transcript()
+    transcript.absorb(binding_hash)
     step_tree = MerkleTree(step_ext)
     state_tree = MerkleTree(state_ext)
     transcript.absorb(step_tree.root)
@@ -264,6 +268,7 @@ def stark_prove(trace: ExecutionTrace) -> dict:
         })
 
     return {
+        "binding_hash": binding_hash,
         "trace_roots": [step_tree.root, state_tree.root],
         "trace_openings": trace_openings,
         "fri": fri_proof,
@@ -284,6 +289,9 @@ def stark_verify(proof: dict) -> bool:
       2. Merkle openings for trace columns
       3. Constraint satisfaction: Q(x) matches recomputed constraints
     """
+    binding_hash = proof.get("binding_hash")
+    if not isinstance(binding_hash, (bytes, bytearray)) or len(binding_hash) != 32:
+        return False
     trace_roots: list[bytes] = proof["trace_roots"]
     openings: list[dict] = proof["trace_openings"]
     fri_proof: dict = proof["fri"]
@@ -300,6 +308,7 @@ def stark_verify(proof: dict) -> bool:
 
     # ── 1. Replay transcript ──
     transcript = Transcript()
+    transcript.absorb(bytes(binding_hash))
     transcript.absorb(trace_roots[0])
     transcript.absorb(trace_roots[1])
     alpha = transcript.squeeze()
@@ -375,6 +384,7 @@ def _serialize_proof(proof: dict) -> dict:
         "scheme": "stark-sky-v1",
         "field": "goldilocks",
         "security_bits": 120,
+        "binding_hash": proof["binding_hash"].hex(),
         "blowup": BLOWUP,
         "num_queries": NUM_QUERIES,
         "trace_roots": [r.hex() for r in proof["trace_roots"]],
@@ -422,6 +432,7 @@ def _deserialize_proof(data: dict) -> dict:
         return [bytes.fromhex(p) for p in paths]
 
     return {
+        "binding_hash": bytes.fromhex(data["binding_hash"]),
         "trace_roots": [bytes.fromhex(r) for r in data["trace_roots"]],
         "trace_openings": [
             {
@@ -477,6 +488,19 @@ def _compute_public_inputs(
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
+def _compute_bundle_binding_hash(bundle: Bundle) -> str:
+    """Canonical hash of the bundle surface bound into STARK transcripts.
+
+    The attestation field is excluded so the proof can bind to the bundle
+    before the attestation itself is attached.
+    """
+    bundle_dict = bundle.to_dict()
+    bundle_dict["attestation"] = None
+    return hashlib.sha256(
+        (json.dumps(bundle_dict, sort_keys=True, separators=(",", ":")) + "\n").encode()
+    ).hexdigest()
+
+
 def generate_attestation(
     bundle: Bundle,
     results: list[ObligationResult],
@@ -498,13 +522,14 @@ def generate_attestation(
         )
 
     public_inputs = _compute_public_inputs(bundle, results)
+    bundle_binding_hash = _compute_bundle_binding_hash(bundle)
 
     all_proofs: list[dict] = []
     total_trace_length = 0
 
     for trace in traces:
         if trace.total_steps > 0 and trace.rows:
-            proof = stark_prove(trace)
+            proof = stark_prove(trace, bytes.fromhex(bundle_binding_hash))
             all_proofs.append(_serialize_proof(proof))
             total_trace_length += trace.total_steps
 
@@ -554,6 +579,18 @@ def verify_attestation(
     expected = _compute_public_inputs(bundle, results)
     if attestation.public_inputs != expected:
         return False
+    if attestation.security_bits < 120:
+        return False
+
+    expected_bundle_binding_hash = _compute_bundle_binding_hash(bundle)
+    expected_proof_count = sum(
+        1 for result in results if result.checked and result.steps_used > 0
+    )
+    expected_total_trace_length = sum(
+        result.steps_used for result in results if result.checked and result.steps_used > 0
+    )
+    if attestation.trace_length != expected_total_trace_length:
+        return False
 
     # Decode proof
     try:
@@ -565,9 +602,22 @@ def verify_attestation(
         return False
     if payload.get("scheme") != "stark-sky-v1":
         return False
+    if payload.get("public_inputs") != expected:
+        return False
+    if payload.get("num_obligations") != len(results):
+        return False
+    if payload.get("total_trace_length") != expected_total_trace_length:
+        return False
+    proofs = payload.get("proofs")
+    if not isinstance(proofs, list):
+        return False
+    if len(proofs) != expected_proof_count:
+        return False
 
     # Verify each per-obligation STARK proof
-    for proof_data in payload.get("proofs", []):
+    for proof_data in proofs:
+        if proof_data.get("binding_hash") != expected_bundle_binding_hash:
+            return False
         proof = _deserialize_proof(proof_data)
         if not stark_verify(proof):
             return False

@@ -173,6 +173,7 @@ contract SKYVerifier {
 
     /// @notice Complete STARK proof for one obligation
     struct STARKProof {
+        bytes32 bindingHash;
         bytes32 stepTraceRoot;
         bytes32 stateTraceRoot;
         uint256 traceLength;         // N (power of 2)
@@ -232,9 +233,11 @@ contract SKYVerifier {
         uint256 omegaExt = GoldilocksField.rootOfUnity(M);
         uint256 omegaNm1 = GoldilocksField.fpow(omegaTrace, N - 1);
         uint256 inv2 = GoldilocksField.finv(2);
+        if (proof.bindingHash == bytes32(0)) return false;
 
         // Replay Fiat-Shamir to get alpha
         bytes32 transcriptState = sha256(bytes("sky-stark-v1"));
+        transcriptState = sha256(abi.encodePacked(transcriptState, proof.bindingHash));
         uint32 transcriptCounter = 0;
         transcriptState = sha256(abi.encodePacked(transcriptState, proof.stepTraceRoot));
         transcriptState = sha256(abi.encodePacked(transcriptState, proof.stateTraceRoot));
@@ -378,6 +381,10 @@ contract SKYVerifier {
         QueryOpening[] calldata traceOpenings,
         FRILayerOpening[][] calldata friOpenings
     ) external returns (bool valid) {
+        if (bundleHash != proof.bindingHash) {
+            emit VerificationFailed(bundleHash, "bundle hash does not match proof binding");
+            return false;
+        }
         valid = verifySTARK(proof, traceOpenings, friOpenings);
 
         if (valid) {

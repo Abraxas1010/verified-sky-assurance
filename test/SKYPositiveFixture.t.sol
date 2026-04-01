@@ -87,4 +87,23 @@ contract SKYPositiveFixtureTest is TestBase {
         bool ok = verifier.verifySTARK(proof, traceOpenings, friOpenings);
         assertFalse(ok, "query positions must be transcript-derived");
     }
+
+    function testRejectsMismatchedBundleHashBinding() public {
+        (
+            SKYVerifier verifier,
+            SKYVerifier.STARKProof memory proof,
+            SKYVerifier.QueryOpening[] memory traceOpenings,
+            SKYVerifier.FRILayerOpening[][] memory friOpenings,
+            bytes32 bundleHash
+        ) = _load();
+        bundleHash;
+
+        bytes32 wrongHash = keccak256("wrong-bundle");
+        bool ok = verifier.verify(wrongHash, proof, traceOpenings, friOpenings);
+        assertFalse(ok, "proof must not verify against a different bundle hash");
+
+        (bool verified, uint256 verifiedAt) = verifier.isVerified(wrongHash);
+        assertFalse(verified, "wrong bundle hash must not be recorded");
+        assertEq(verifiedAt, 0, "wrong bundle hash must not get a timestamp");
+    }
 }

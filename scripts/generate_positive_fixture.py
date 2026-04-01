@@ -15,7 +15,11 @@ FIXTURES = ROOT / "test" / "fixtures"
 
 sys.path.insert(0, str(ROOT))
 
-from assurance.attestation import generate_attestation, record_trace
+from assurance.attestation import (
+    _compute_bundle_binding_hash,
+    generate_attestation,
+    record_trace,
+)
 from assurance.models import Bundle, Obligation
 from assurance.reducer import verify_bundle
 
@@ -106,6 +110,7 @@ def _emit_proof_fn(proof: dict, bundle_hash: str) -> str:
         "            SKYVerifier.FRILayerOpening[][] memory friOpenings",
         "        )",
         "    {",
+        f"        proof.bindingHash = {_hex_bytes32(proof['binding_hash'])};",
         f"        proof.stepTraceRoot = {_hex_bytes32(proof['trace_roots'][0])};",
         f"        proof.stateTraceRoot = {_hex_bytes32(proof['trace_roots'][1])};",
         f"        proof.traceLength = {proof['public']['trace_length']};",
@@ -198,9 +203,7 @@ def main() -> int:
     proof = payload["proofs"][0]
 
     bundle_dict = bundle.to_dict()
-    bundle_hash = hashlib.sha256(
-        (json.dumps(bundle_dict, sort_keys=True, separators=(",", ":")) + "\n").encode()
-    ).hexdigest()
+    bundle_hash = _compute_bundle_binding_hash(bundle)
 
     EXAMPLES.mkdir(parents=True, exist_ok=True)
     FIXTURES.mkdir(parents=True, exist_ok=True)
