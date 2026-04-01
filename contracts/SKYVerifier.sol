@@ -46,6 +46,35 @@ library GoldilocksField {
     }
 }
 
+library SKYEncoding {
+    function byteSwap64(uint64 value) internal pure returns (uint64) {
+        value = ((value & 0xFF00FF00FF00FF00) >> 8) | ((value & 0x00FF00FF00FF00FF) << 8);
+        value = ((value & 0xFFFF0000FFFF0000) >> 16) | ((value & 0x0000FFFF0000FFFF) << 16);
+        value = (value >> 32) | (value << 32);
+        return value;
+    }
+
+    function littleEndianBytes(uint64 value) internal pure returns (bytes8) {
+        return bytes8(byteSwap64(value));
+    }
+
+    function byteSwap32(uint32 value) internal pure returns (uint32) {
+        value = ((value & 0xFF00FF00) >> 8) | ((value & 0x00FF00FF) << 8);
+        value = (value >> 16) | (value << 16);
+        return value;
+    }
+
+    function littleEndianBytes32(uint32 value) internal pure returns (bytes4) {
+        return bytes4(byteSwap32(value));
+    }
+
+    function first8BytesLittleEndian(bytes32 value) internal pure returns (uint256 acc) {
+        for (uint256 i = 0; i < 8; i++) {
+            acc |= uint256(uint8(value[i])) << (8 * i);
+        }
+    }
+}
+
 /**
  * @title MerkleVerifier
  * @notice SHA-256 Merkle tree verification with domain-separated hashing.
@@ -54,7 +83,9 @@ library GoldilocksField {
  */
 library MerkleVerifier {
     function hashLeaf(uint64 value) internal pure returns (bytes32) {
-        return sha256(abi.encodePacked(bytes1(0x00), value));
+        return sha256(
+            abi.encodePacked(bytes1(0x00), SKYEncoding.littleEndianBytes(value))
+        );
     }
 
     function hashNode(bytes32 left, bytes32 right) internal pure returns (bytes32) {
@@ -155,6 +186,19 @@ contract SKYVerifier {
         uint256[] queryPositions;
     }
 
+    function _expectedFRILayers(uint256 traceLength) internal pure returns (uint256 layers) {
+        while (traceLength > 1) {
+            traceLength >>= 1;
+            layers += 1;
+        }
+    }
+
+    function _transcriptSqueeze(bytes32 state, uint32 counter) internal pure returns (uint256) {
+        return SKYEncoding.first8BytesLittleEndian(
+            sha256(abi.encodePacked(state, SKYEncoding.littleEndianBytes32(counter)))
+        ) % GoldilocksField.P;
+    }
+
     /**
      * @notice Verify a single STARK proof's structural integrity.
      * @dev Checks FRI Merkle openings and constraint consistency at
@@ -165,35 +209,64 @@ contract SKYVerifier {
         STARKProof calldata proof,
         QueryOpening[] calldata traceOpenings,
         FRILayerOpening[][] calldata friOpenings
-    ) public view returns (bool) {
+    ) public pure returns (bool) {
         uint256 N = proof.traceLength;
         uint256 M = N * BLOWUP;
 
         // Validate parameters
         if (N == 0 || N > 1 << 20) return false;
         if (N & (N - 1) != 0) return false;  // must be power of 2
+        if (proof.inputHash >= GoldilocksField.P) return false;
+        if (proof.outputHash >= GoldilocksField.P) return false;
+        if (proof.friFinal >= GoldilocksField.P) return false;
         if (proof.queryPositions.length != NUM_QUERIES) return false;
         if (traceOpenings.length != NUM_QUERIES) return false;
+        if (friOpenings.length != NUM_QUERIES) return false;
+        if (proof.friRoots.length == 0) return false;
+        if (proof.friRoots.length != proof.friLayerDomainSizes.length) return false;
+        if (proof.friRoots.length != proof.friLayerShifts.length) return false;
+        if (proof.friRoots.length != proof.friLayerOmegas.length) return false;
+        if (proof.friRoots.length != _expectedFRILayers(N)) return false;
 
         uint256 omegaTrace = GoldilocksField.rootOfUnity(N);
         uint256 omegaExt = GoldilocksField.rootOfUnity(M);
         uint256 omegaNm1 = GoldilocksField.fpow(omegaTrace, N - 1);
+        uint256 inv2 = GoldilocksField.finv(2);
 
         // Replay Fiat-Shamir to get alpha
-        // (In production, replay full transcript; here we verify
-        //  the proof structure and Merkle openings)
-        bytes32 transcriptState = sha256(abi.encodePacked(
-            "sky-stark-v1",
-            proof.stepTraceRoot,
-            proof.stateTraceRoot
-        ));
-        uint256 alpha = uint256(sha256(abi.encodePacked(transcriptState)))
-            % GoldilocksField.P;
+        bytes32 transcriptState = sha256(bytes("sky-stark-v1"));
+        uint32 transcriptCounter = 0;
+        transcriptState = sha256(abi.encodePacked(transcriptState, proof.stepTraceRoot));
+        transcriptState = sha256(abi.encodePacked(transcriptState, proof.stateTraceRoot));
+        uint256 alpha = _transcriptSqueeze(transcriptState, transcriptCounter);
+        transcriptCounter += 1;
+
+        uint256[] memory betas = new uint256[](proof.friRoots.length);
+        uint256 expectedDomainSize = M;
+        uint256 expectedShift = COSET_SHIFT;
+        for (uint256 li = 0; li < proof.friRoots.length; li++) {
+            if (proof.friLayerDomainSizes[li] != expectedDomainSize) return false;
+            if (proof.friLayerShifts[li] != expectedShift) return false;
+            if (proof.friLayerOmegas[li] != GoldilocksField.rootOfUnity(expectedDomainSize)) return false;
+            transcriptState = sha256(abi.encodePacked(transcriptState, proof.friRoots[li]));
+            transcriptCounter = 0;
+            betas[li] = _transcriptSqueeze(transcriptState, transcriptCounter);
+            transcriptCounter += 1;
+            expectedDomainSize >>= 1;
+            expectedShift = GoldilocksField.fmul(expectedShift, expectedShift);
+        }
+        transcriptState = sha256(
+            abi.encodePacked(transcriptState, SKYEncoding.littleEndianBytes(uint64(proof.friFinal)))
+        );
+        transcriptCounter = 0;
 
         // Check each query
         for (uint256 qi = 0; qi < NUM_QUERIES; qi++) {
-            uint256 pos = proof.queryPositions[qi];
+            uint256 pos = _transcriptSqueeze(transcriptState, transcriptCounter) % proof.friLayerDomainSizes[0];
+            transcriptCounter += 1;
+            if (proof.queryPositions[qi] != pos) return false;
             QueryOpening calldata op = traceOpenings[qi];
+            if (friOpenings[qi].length != proof.friRoots.length) return false;
 
             // Verify trace Merkle proofs
             if (!MerkleVerifier.verify(
@@ -256,17 +329,40 @@ contract SKYVerifier {
                 if (uint256(friOpenings[qi][0].val) != qExpected) return false;
             }
 
-            // Verify FRI layer Merkle openings
+            // Verify each FRI layer and the fold relation into the next layer.
+            uint256 currentPos = pos;
             for (uint256 li = 0; li < friOpenings[qi].length; li++) {
                 FRILayerOpening calldata fl = friOpenings[qi][li];
-                if (li < proof.friRoots.length) {
-                    if (!MerkleVerifier.verify(
-                        proof.friRoots[li], fl.pos, fl.val, fl.proof
-                    )) return false;
-                    if (!MerkleVerifier.verify(
-                        proof.friRoots[li], fl.sibPos, fl.sibVal, fl.sibProof
-                    )) return false;
+                uint256 ds = proof.friLayerDomainSizes[li];
+                uint256 halfDs = ds / 2;
+                if (fl.pos != currentPos) return false;
+                if (fl.sibPos != (currentPos + halfDs) % ds) return false;
+                if (!MerkleVerifier.verify(
+                    proof.friRoots[li], fl.pos, fl.val, fl.proof
+                )) return false;
+                if (!MerkleVerifier.verify(
+                    proof.friRoots[li], fl.sibPos, fl.sibVal, fl.sibProof
+                )) return false;
+
+                uint256 xFri = GoldilocksField.fmul(
+                    proof.friLayerShifts[li],
+                    GoldilocksField.fpow(proof.friLayerOmegas[li], fl.pos)
+                );
+                uint256 sum = GoldilocksField.fadd(uint256(fl.val), uint256(fl.sibVal));
+                uint256 diff = GoldilocksField.fsub(uint256(fl.val), uint256(fl.sibVal));
+                uint256 inv2x = GoldilocksField.finv(GoldilocksField.fmul(2, xFri));
+                uint256 folded = GoldilocksField.fadd(
+                    GoldilocksField.fmul(sum, inv2),
+                    GoldilocksField.fmul(betas[li], GoldilocksField.fmul(diff, inv2x))
+                );
+
+                if (li + 1 < friOpenings[qi].length) {
+                    if (uint256(friOpenings[qi][li + 1].val) != folded) return false;
+                } else {
+                    if (folded != proof.friFinal) return false;
                 }
+
+                currentPos = currentPos % halfDs;
             }
         }
 
@@ -320,57 +416,5 @@ contract SKYVerifier {
                 bundleHashes[i], proofs[i], traceOpenings[i], friOpenings[i]
             );
         }
-    }
-}
-
-/**
- * @title SKYBundleRegistry
- * @notice On-chain registry of verified SKY proof bundles.
- */
-contract SKYBundleRegistry {
-    SKYVerifier public immutable verifier;
-
-    struct BundleMetadata {
-        string sourceDescription;
-        string leanVersion;
-        uint256 obligationCount;
-        bytes32 bundleHash;
-        uint256 registeredAt;
-        address registeredBy;
-    }
-
-    mapping(bytes32 => BundleMetadata) public registry;
-    bytes32[] public registeredBundles;
-
-    event BundleRegistered(bytes32 indexed bundleHash, string description, address registeredBy);
-
-    constructor(address _verifier) {
-        verifier = SKYVerifier(_verifier);
-    }
-
-    function register(
-        bytes32 bundleHash,
-        string calldata description,
-        string calldata leanVersion,
-        uint256 obligationCount
-    ) external {
-        (bool verified,) = verifier.isVerified(bundleHash);
-        require(verified, "Bundle must be verified first");
-        require(registry[bundleHash].registeredAt == 0, "Already registered");
-
-        registry[bundleHash] = BundleMetadata({
-            sourceDescription: description,
-            leanVersion: leanVersion,
-            obligationCount: obligationCount,
-            bundleHash: bundleHash,
-            registeredAt: block.timestamp,
-            registeredBy: msg.sender
-        });
-        registeredBundles.push(bundleHash);
-        emit BundleRegistered(bundleHash, description, msg.sender);
-    }
-
-    function registeredCount() external view returns (uint256) {
-        return registeredBundles.length;
     }
 }

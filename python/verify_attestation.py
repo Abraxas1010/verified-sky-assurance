@@ -5,6 +5,9 @@ import json
 import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
 from assurance.attestation import verify_attestation
 from assurance.models import Bundle, ObligationResult
 

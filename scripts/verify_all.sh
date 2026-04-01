@@ -2,4 +2,6 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+python3 "$PROJECT_ROOT/scripts/generate_positive_fixture.py" > /dev/null
 PYTHONPATH="$PROJECT_ROOT" python3 -m unittest discover -s "$PROJECT_ROOT/tests" -p 'test_*.py'
+forge test --root "$PROJECT_ROOT"

@@ -11,5 +11,6 @@ This assurance lane adds assumptions beyond the base SKY verifier:
 ## Current Status
 
 - attestation code: reference implementation
-- contract surfaces: reference implementation
+- contract surfaces: reference implementation with local positive and tamper-path
+  coverage for the current AIR/FRI scheme
 - production posture: requires independent assurance review before buyer claims are upgraded

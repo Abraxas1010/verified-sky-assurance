@@ -31,6 +31,13 @@ class AssuranceTests(unittest.TestCase):
         attestation = generate_attestation(bundle, results, [])
         self.assertTrue(verify_attestation(attestation.to_dict(), bundle, results))
 
+    def test_attestation_requires_explicit_flag(self):
+        os.environ.pop("ENABLE_EXPERIMENTAL_ATTESTATION", None)
+        bundle = Bundle(obligations=[Obligation(id="t", compiled_check="K", expected_result="true")])
+        _, results = verify_bundle(bundle)
+        with self.assertRaises(RuntimeError):
+            generate_attestation(bundle, results, [])
+
     def test_cli_rejects_malformed_attestation(self):
         result = subprocess.run(
             [sys.executable, str(ROOT / "python" / "verify_attestation.py"), str(ROOT / "examples" / "attestation.json"), str(ROOT / "examples" / "bundle.json"), str(ROOT / "examples" / "results.json")],
@@ -40,6 +47,26 @@ class AssuranceTests(unittest.TestCase):
             timeout=30,
         )
         self.assertNotEqual(result.returncode, 0)
+
+    def test_positive_attestation_fixture_verifies(self):
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "python" / "verify_attestation.py"), str(ROOT / "examples" / "positive_attestation.json"), str(ROOT / "examples" / "positive_bundle.json"), str(ROOT / "examples" / "positive_results.json")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+
+    def test_foundry_contract_harness(self):
+        result = subprocess.run(
+            ["forge", "test"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

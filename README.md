@@ -17,6 +17,7 @@ Separate assurance lane for cryptographic attestation, STARK/ZK-style receipts, 
 
 - attestation inspection and verification tooling
 - Solidity verifier and registry contracts
+- local Foundry harness with positive and tamper-path coverage for the Solidity lane
 - security-model and limitations documentation
 - local verification scripts for assurance-specific artifacts
 
@@ -44,6 +45,12 @@ See:
 
 ```bash
 ./scripts/verify_all.sh
+```
+
+The Solidity lane is explicit and local-only:
+
+```bash
+forge test
 ```
 
 ## Container Quick Start

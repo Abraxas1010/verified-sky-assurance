@@ -1,0 +1,34 @@
+{
+  "attestation": null,
+  "description": "Positive fixture for end-to-end on-chain verification.",
+  "format": "sky-bundle",
+  "obligations": [
+    {
+      "compiled_check": [
+        "app",
+        [
+          "app",
+          "K",
+          "K"
+        ],
+        [
+          "app",
+          [
+            "app",
+            "S",
+            "K"
+          ],
+          "K"
+        ]
+      ],
+      "expected_result": "true",
+      "fuel": 10000,
+      "fuel_reduce": 50000,
+      "id": "k_rule_demo",
+      "kind": "check"
+    }
+  ],
+  "result": {},
+  "source_hash": "fixture-k-rule-demo",
+  "version": "1.0.0"
+}
