@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+import unittest
+from pathlib import Path
+
+from assurance.attestation import generate_attestation, verify_attestation
+from assurance.models import Bundle, Obligation
+from assurance.reducer import verify_bundle
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+class AssuranceTests(unittest.TestCase):
+    def test_docs_and_contracts_exist(self):
+        for path in [
+            ROOT / "docs" / "security_model.md",
+            ROOT / "docs" / "onchain_limitations.md",
+            ROOT / "contracts" / "SKYVerifier.sol",
+            ROOT / "contracts" / "SKYBundleRegistry.sol",
+        ]:
+            self.assertTrue(path.exists(), msg=f"missing {path}")
+
+    def test_generated_attestation_verifies(self):
+        os.environ["ENABLE_EXPERIMENTAL_ATTESTATION"] = "true"
+        bundle = Bundle(obligations=[Obligation(id="t", compiled_check="K", expected_result="true")])
+        _, results = verify_bundle(bundle)
+        attestation = generate_attestation(bundle, results, [])
+        self.assertTrue(verify_attestation(attestation.to_dict(), bundle, results))
+
+    def test_cli_rejects_malformed_attestation(self):
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "python" / "verify_attestation.py"), str(ROOT / "examples" / "attestation.json"), str(ROOT / "examples" / "bundle.json"), str(ROOT / "examples" / "results.json")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertNotEqual(result.returncode, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "format": "sky-bundle",
+  "source_hash": "example-trivial-true",
+  "description": "Example bundle for assurance tooling",
+  "obligations": [
+    {
+      "id": "trivial_true",
+      "kind": "check",
+      "compiled_check": "K",
+      "fuel": 10000,
+      "fuel_reduce": 50000,
+      "expected_result": "true"
+    }
+  ],
+  "result": {},
+  "attestation": null
+}

@@ -1,0 +1,7 @@
+{
+  "type": "stark",
+  "proof": "bm90LWEtcmVhbC1wcm9vZg==",
+  "public_inputs": "deadbeef",
+  "trace_length": 0,
+  "security_bits": 120
+}

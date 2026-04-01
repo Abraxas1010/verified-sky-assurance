@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+title: "Verified SKY Assurance"
+message: "If you use this assurance lane, please cite it using this metadata."
+type: software
+authors:
+  - family-names: "Goodman"
+    given-names: "Ryan"
+repository-code: "https://github.com/Abraxas1010/verified-sky-assurance"
+license: "Apoth3osis License Stack v1"
+abstract: "Separate assurance lane for SKY bundle attestation inspection, verification tooling, and on-chain registry components."
+keywords:
+  - "formal verification"
+  - "attestation"
+  - "Solidity"
+  - "zero knowledge"
+  - "proof assurance"
