@@ -38,6 +38,7 @@ See:
 
 - `docs/google_cloud_assurance_workflow.md`
 - `docs/applied_team_handoff.md`
+- `docs/production_team_handoff.md`
 - `docs/security_model.md`
 - `docs/onchain_limitations.md`
 
