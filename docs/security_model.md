@@ -19,6 +19,9 @@ This assurance lane adds assumptions beyond the base SKY verifier:
 - proof binding: the verifier now binds each STARK proof to the canonical bundle
   hash through the Fiat-Shamir transcript, so a valid proof cannot be replayed
   against an unrelated bundle hash without failing verification
+- aggregate binding: the registry can attach an aggregate-receipt hash and
+  proof-root hash to a previously verified bundle, but completeness/closure for
+  that aggregate remains an off-chain verifier responsibility
 - malformed attestation defense: the Python verifier now rejects empty proof
   payloads, proof-count mismatches, and bundle-binding mismatches instead of
   accepting shape-only attestations

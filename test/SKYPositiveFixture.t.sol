@@ -41,6 +41,11 @@ contract SKYPositiveFixtureTest is TestBase {
         SKYBundleRegistry registry = new SKYBundleRegistry(address(verifier));
         registry.register(bundleHash, "k_rule_demo", "fixture", 1);
         assertEq(registry.registeredCount(), 1, "registry must contain the verified bundle");
+
+        bytes32 aggregateHash = keccak256("positive-fixture-aggregate");
+        bytes32 rootHash = keccak256("positive-fixture-root");
+        registry.registerAggregateReceipt(bundleHash, aggregateHash, rootHash, "fixture aggregate receipt", 1, 1);
+        assertEq(registry.registeredAggregateCount(), 1, "registry must contain the aggregate receipt binding");
     }
 
     function testRejectsTamperedFRIFold() public {
