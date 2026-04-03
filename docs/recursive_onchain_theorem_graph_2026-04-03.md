@@ -7,7 +7,7 @@ project `recursive_succinct_onchain_theorem_graph_20260402`.
 
 - upstream repo: `Abraxas1010/heyting`
 - upstream branch: `master`
-- upstream persistence commit: `0504653dd1`
+- upstream persistence commit: `c887299aaa`
 - conjecture: `conjectures/recursive_succinct_onchain_theorem_graph_20260402.json`
 - proof tree: `Blueprint/proof_trees/recursive_succinct_onchain_theorem_graph_20260402.json`
 - claim boundary:
@@ -52,6 +52,25 @@ operational guarantee added there is:
 This does not widen the mathematical claim boundary. It preserves the same
 honest theorem/assurance boundary while making the published pipeline more
 robust under multi-worktree cache sharing.
+
+## Rust Kernel Sync
+
+Upstream later replaced the deterministic distributed proof-network core with a
+Rust kernel while preserving the existing Python command surfaces as thin
+compatibility shims. The concrete scope of that change is:
+
+- `verified_proof_root_build.py`, `verified_proof_worker_receipt.py`, and
+  `verified_proof_aggregate.py` no longer carry the root/receipt/aggregate
+  logic themselves
+- the deterministic implementation now lives in
+  `projects/recursive_onchain_kernel`
+- regression coverage was extended so the existing distributed verification and
+  recursive receipt tests continue to pass across the shimmed path
+
+This is an implementation-surface hardening step, not a new mathematical
+closure claim. In particular, upstream did **not** publish this step as a
+LeanCP-generated Rust artifact; it is a Rust replacement of the prior Python
+deterministic core, still governed by the same honest boundary.
 
 ## Key Upstream Lean Modules
 
