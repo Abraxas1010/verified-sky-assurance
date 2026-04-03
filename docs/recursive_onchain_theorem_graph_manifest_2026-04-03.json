@@ -1,0 +1,38 @@
+{
+  "project_id": "recursive_succinct_onchain_theorem_graph_20260402",
+  "persisted_on": "2026-04-03",
+  "upstream_repo": "https://github.com/Abraxas1010/heyting",
+  "upstream_branch": "master",
+  "upstream_persistence_commit": "d958c0026e",
+  "upstream_conjecture_path": "conjectures/recursive_succinct_onchain_theorem_graph_20260402.json",
+  "upstream_proof_tree_path": "Blueprint/proof_trees/recursive_succinct_onchain_theorem_graph_20260402.json",
+  "upstream_claim_boundary_path": "Docs/ops/recursive_onchain_claim_boundary_2026-04-02.md",
+  "key_modules": [
+    "lean/HeytingLean/LoF/LeanKernel/Distributed/RecursiveReceipt.lean",
+    "lean/HeytingLean/LoF/LeanKernel/Distributed/RecursiveStatement.lean",
+    "lean/HeytingLean/LoF/LeanKernel/Distributed/RecursiveReceiptJson.lean",
+    "lean/HeytingLean/LoF/LeanKernel/Distributed/OnChainPublicInput.lean",
+    "lean/HeytingLean/LoF/LeanKernel/Distributed/OnChainVerifierModel.lean",
+    "lean/HeytingLean/KernelAssurance/GraphRecursiveAssurance.lean",
+    "lean/HeytingLean/CLI/RecursiveProofReceiptMain.lean",
+    "lean/HeytingLean/CLI/OnChainGraphVerifierMain.lean",
+    "lean/HeytingLean/CLI/VerifiedProofSubmissionDeclsMain.lean",
+    "lean/HeytingLean/LeanClef/SourceExport/QuotedComb.lean"
+  ],
+  "proved_guarantees": [
+    "compile-first submission harvest over Lean-produced declaration surface",
+    "stronger arbitrary proof-bearing front door including top-level example and private theorem cases",
+    "recursive receipt fold algebra including foldPair_preserves_statement",
+    "Lean-defined public-input verifier model including onChainAccepts_of_envelopeMatchesStatement and onChainRejects_mutatedDigest",
+    "stable recursive/on-chain corpus 4/4 end-to-end closure",
+    "tamper suite 5/5 rejection outcomes",
+    "normalized reflexive equality over already-supported closed data closes through quoted-comb bridge"
+  ],
+  "not_justified": [
+    "cryptographic succinctness",
+    "production blockchain deployment",
+    "universal source-export closure for arbitrary proof terms",
+    "stress-frontier throughput closure on large everyday verifier corpora"
+  ],
+  "separate_repo_role": "Durable assurance-side handoff and citation surface for recursive/on-chain theorem-graph completeness work"
+}

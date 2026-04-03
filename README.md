@@ -32,6 +32,15 @@ Separate assurance lane for cryptographic attestation, STARK/ZK-style receipts, 
 - `sky-proof-checker`: customer and auditor replay
 - `verified-sky-assurance`: separate STARK/ZK and on-chain assurance lane
 
+## Persisted Project Dossiers
+
+- `docs/recursive_onchain_theorem_graph_2026-04-03.md`: persisted handoff for the
+  `recursive_succinct_onchain_theorem_graph_20260402` project from `heyting`
+  master, including the proved theorem surface, honest boundary, and upstream
+  source-of-truth references.
+- `docs/recursive_onchain_theorem_graph_manifest_2026-04-03.json`:
+  machine-readable project manifest for the same handoff.
+
 ## Applied Team Guidance
 
 See:
