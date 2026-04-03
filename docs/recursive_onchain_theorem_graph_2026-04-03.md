@@ -7,7 +7,7 @@ project `recursive_succinct_onchain_theorem_graph_20260402`.
 
 - upstream repo: `Abraxas1010/heyting`
 - upstream branch: `master`
-- upstream persistence commit: `d958c0026e`
+- upstream persistence commit: `0504653dd1`
 - conjecture: `conjectures/recursive_succinct_onchain_theorem_graph_20260402.json`
 - proof tree: `Blueprint/proof_trees/recursive_succinct_onchain_theorem_graph_20260402.json`
 - claim boundary:
@@ -33,6 +33,25 @@ The project closed with these published guarantees:
 - tamper suite rejects 5/5 mutated cases at the appropriate layer
 - normalized reflexive equality over already-supported closed data closes
   through the quoted-combinator bridge
+
+## Post-Close Hardening Sync
+
+After the main closeout, upstream published one more hostile-audit remediation
+pass tied to `recursive_onchain_production_hardening_20260403`. The specific
+operational guarantee added there is:
+
+- stale shared Lean export objects (`*.c.o.export`) now trigger linker-failure
+  recovery in the Python lake helper instead of silently leaving the submission
+  harvester broken on a dirty checkout
+- private declaration text resolution is centralized in
+  `HeytingLean.CLI.EnvBootstrap`, with fail-closed handling for ambiguous
+  suffix matches
+- the recovery path is regression-tested in Python, so this hardening is not
+  just an operator note
+
+This does not widen the mathematical claim boundary. It preserves the same
+honest theorem/assurance boundary while making the published pipeline more
+robust under multi-worktree cache sharing.
 
 ## Key Upstream Lean Modules
 

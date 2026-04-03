@@ -3,8 +3,9 @@
   "persisted_on": "2026-04-03",
   "upstream_repo": "https://github.com/Abraxas1010/heyting",
   "upstream_branch": "master",
-  "upstream_persistence_commit": "d958c0026e",
+  "upstream_persistence_commit": "0504653dd1",
   "upstream_conjecture_path": "conjectures/recursive_succinct_onchain_theorem_graph_20260402.json",
+  "upstream_hardening_conjecture_path": "conjectures/recursive_onchain_production_hardening_20260403.json",
   "upstream_proof_tree_path": "Blueprint/proof_trees/recursive_succinct_onchain_theorem_graph_20260402.json",
   "upstream_claim_boundary_path": "Docs/ops/recursive_onchain_claim_boundary_2026-04-02.md",
   "key_modules": [
@@ -26,7 +27,8 @@
     "Lean-defined public-input verifier model including onChainAccepts_of_envelopeMatchesStatement and onChainRejects_mutatedDigest",
     "stable recursive/on-chain corpus 4/4 end-to-end closure",
     "tamper suite 5/5 rejection outcomes",
-    "normalized reflexive equality over already-supported closed data closes through quoted-comb bridge"
+    "normalized reflexive equality over already-supported closed data closes through quoted-comb bridge",
+    "stale shared linker export objects now recover fail-closed through the lake helper instead of silently breaking declaration harvest"
   ],
   "not_justified": [
     "cryptographic succinctness",
