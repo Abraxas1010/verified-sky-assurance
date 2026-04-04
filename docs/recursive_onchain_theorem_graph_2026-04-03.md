@@ -7,7 +7,7 @@ project `recursive_succinct_onchain_theorem_graph_20260402`.
 
 - upstream repo: `Abraxas1010/heyting`
 - upstream branch: `master`
-- upstream persistence commit: `4fda08623c`
+- upstream persistence commit: `a7008443c9`
 - conjecture: `conjectures/recursive_succinct_onchain_theorem_graph_20260402.json`
 - proof tree: `Blueprint/proof_trees/recursive_succinct_onchain_theorem_graph_20260402.json`
 - claim boundary:
@@ -77,6 +77,25 @@ closure claim. The honest boundary is now narrower than before: the aggregate
 completeness decision is Lean-owned and LeanCP-exported, but JSON parsing,
 string hashing/interning, and the remaining host orchestration are still not
 claimed as generated from Lean.
+
+## Stale-Artifact Recovery Hardening
+
+Upstream later closed the recurring stale-build failure that hostile audits
+kept reproducing on shared checkouts. The concrete scope of that fix is:
+
+- `scripts/verified_proof_lake_utils.py` now proactively scans local
+  `HeytingLean` sources against their built `olean`/`ilean`/IR artifacts and
+  deletes stale module outputs before `ensure_targets` runs
+- the same helper now treats stale Lean elaboration failures such as
+  `Unknown identifier` and `unknown constant` as a fail-closed retry surface,
+  purging stale local module artifacts before rebuilding
+- regression coverage in `tests/test_verified_proof_lake_utils.py` now covers
+  both the proactive stale-artifact purge and the reactive stale-elaboration
+  retry path, not just the older linker-object cleanup
+
+This is an operational reliability fix, not a theorem-boundary widening. It
+reduces trust in stale local build caches without changing the mathematical
+claims carried by the recursive/on-chain project.
 
 ## Key Upstream Lean Modules
 
