@@ -38,9 +38,8 @@ Separate assurance lane for cryptographic attestation, STARK/ZK-style receipts, 
   `recursive_succinct_onchain_theorem_graph_20260402` project from `heyting`
   master, including the proved theorem surface, honest boundary, upstream
   source-of-truth references, and the post-close hostile-audit hardening sync
-  through `heyting` commit `c887299aaa`, including the later Rust-kernel
-  replacement for the deterministic distributed proof root/receipt/aggregate
-  path.
+  through `heyting` commit `4fda08623c`, including the later LeanCP-exported
+  Rust aggregate-completeness kernel sync.
 - `docs/recursive_onchain_theorem_graph_manifest_2026-04-03.json`:
   machine-readable project manifest for the same handoff.
 

@@ -3,7 +3,7 @@
   "persisted_on": "2026-04-03",
   "upstream_repo": "https://github.com/Abraxas1010/heyting",
   "upstream_branch": "master",
-  "upstream_persistence_commit": "c887299aaa",
+  "upstream_persistence_commit": "4fda08623c",
   "upstream_conjecture_path": "conjectures/recursive_succinct_onchain_theorem_graph_20260402.json",
   "upstream_hardening_conjecture_path": "conjectures/recursive_onchain_production_hardening_20260403.json",
   "upstream_proof_tree_path": "Blueprint/proof_trees/recursive_succinct_onchain_theorem_graph_20260402.json",
@@ -29,7 +29,7 @@
     "tamper suite 5/5 rejection outcomes",
     "normalized reflexive equality over already-supported closed data closes through quoted-comb bridge",
     "stale shared linker export objects now recover fail-closed through the lake helper instead of silently breaking declaration harvest",
-    "deterministic distributed proof root, worker receipt, and aggregate logic now runs through a Rust kernel with Python compatibility shims"
+    "the aggregate completeness decision now runs through a Lean-owned normalized kernel exported to Rust via LeanCP and checked against the host-side aggregate diagnostics"
   ],
   "not_justified": [
     "cryptographic succinctness",

@@ -7,7 +7,7 @@ project `recursive_succinct_onchain_theorem_graph_20260402`.
 
 - upstream repo: `Abraxas1010/heyting`
 - upstream branch: `master`
-- upstream persistence commit: `c887299aaa`
+- upstream persistence commit: `4fda08623c`
 - conjecture: `conjectures/recursive_succinct_onchain_theorem_graph_20260402.json`
 - proof tree: `Blueprint/proof_trees/recursive_succinct_onchain_theorem_graph_20260402.json`
 - claim boundary:
@@ -53,24 +53,30 @@ This does not widen the mathematical claim boundary. It preserves the same
 honest theorem/assurance boundary while making the published pipeline more
 robust under multi-worktree cache sharing.
 
-## Rust Kernel Sync
+## LeanCP Aggregate-Kernel Sync
 
-Upstream later replaced the deterministic distributed proof-network core with a
-Rust kernel while preserving the existing Python command surfaces as thin
-compatibility shims. The concrete scope of that change is:
+Upstream later moved the trust-critical aggregate-completeness decision onto a
+Lean-owned normalized kernel that is exported to Rust through LeanCP. The
+concrete scope of that change is:
 
-- `verified_proof_root_build.py`, `verified_proof_worker_receipt.py`, and
-  `verified_proof_aggregate.py` no longer carry the root/receipt/aggregate
-  logic themselves
-- the deterministic implementation now lives in
-  `projects/recursive_onchain_kernel`
-- regression coverage was extended so the existing distributed verification and
-  recursive receipt tests continue to pass across the shimmed path
+- `lean/HeytingLean/LoF/LeanKernel/Distributed/AggregateClosureKernelExtract.lean`
+  defines the normalized aggregate-completeness Boolean in Lean-owned code
+- `lean/HeytingLean/CLI/LeanCPExportAggregateClosureKernelRustMain.lean`
+  emits Rust for that kernel through the existing LeanCP export path
+- `projects/recursive_onchain_kernel/src/generated_aggregate_closure_kernel.rs`
+  is the checked-in generated Rust artifact consumed by the recursive on-chain
+  host crate
+- the host crate still performs JSON/string normalization and fail-closed parity
+  checks, but it now delegates the aggregate-completeness decision itself to
+  the generated kernel
+- regression coverage was extended so the generated-kernel path stays aligned
+  with the existing distributed verification and recursive receipt tests
 
 This is an implementation-surface hardening step, not a new mathematical
-closure claim. In particular, upstream did **not** publish this step as a
-LeanCP-generated Rust artifact; it is a Rust replacement of the prior Python
-deterministic core, still governed by the same honest boundary.
+closure claim. The honest boundary is now narrower than before: the aggregate
+completeness decision is Lean-owned and LeanCP-exported, but JSON parsing,
+string hashing/interning, and the remaining host orchestration are still not
+claimed as generated from Lean.
 
 ## Key Upstream Lean Modules
 
